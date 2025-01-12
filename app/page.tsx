@@ -15,7 +15,7 @@ import { useToolsFunctions } from "@/hooks/use-tools"
 
 const App: React.FC = () => {
   // State for voice selection
-  const [voice, setVoice] = useState("ash")
+  const [voice, setVoice] = useState("nova")
 
   // WebRTC Audio Session Hook
   const {
