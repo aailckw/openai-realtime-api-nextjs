@@ -70,6 +70,15 @@ export default function useWebRTCAudioSession(
    */
   const ephemeralUserMessageIdRef = useRef<string | null>(null);
 
+  const voiceToCharacter: Record<string, string> = {
+    'echo': 'robot',
+    'shimmer': 'cat',
+    'sage': 'dinosaur',
+    'coral': 'bear',
+    'alloy': 'meercat',
+    'ballad': 'sheep'
+  };
+
   /**
    * Register a function (tool) so the AI can call it.
    */
@@ -313,12 +322,15 @@ export default function useWebRTCAudioSession(
    */
   async function getEphemeralToken() {
     try {
+      const character = voiceToCharacter[voice] || 'robot';
       const response = await fetch("/api/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ character })
       });
       if (!response.ok) {
-        throw new Error(`Failed to get ephemeral token: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Failed to get ephemeral token: ${response.status} - ${errorText}`);
       }
       const data = await response.json();
       return data.client_secret.value;
@@ -417,7 +429,6 @@ export default function useWebRTCAudioSession(
       dataChannelRef.current = dataChannel;
 
       dataChannel.onopen = () => {
-        // console.log("Data channel open");
         configureDataChannel(dataChannel);
       };
       dataChannel.onmessage = handleDataChannelMessage;
@@ -440,6 +451,11 @@ export default function useWebRTCAudioSession(
           "Content-Type": "application/sdp",
         },
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API request failed: ${response.status} - ${errorText}`);
+      }
 
       // Set remote description
       const answerSdp = await response.text();
