@@ -1,104 +1,113 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { Mic, MicOff } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import ReactSiriwave from 'react-siriwave';
 
 interface BroadcastButtonProps {
   isSessionActive: boolean;
   onClick: () => void;
+  currentVolume?: number;
 }
 
 export const BroadcastButton: React.FC<BroadcastButtonProps> = ({
   isSessionActive,
   onClick,
+  currentVolume = 0
 }) => {
+  const siriWaveConfig = {
+    theme: "ios9" as const,
+    ratio: 1.8,
+    speed: isSessionActive ? (currentVolume > 0.01 ? currentVolume * 100 : 0.5) : 0,
+    amplitude: isSessionActive ? (currentVolume > 0.01 ? currentVolume * 120 : 1) : 0,
+    frequency: isSessionActive ? (currentVolume > 0.01 ? currentVolume * 90 : 1) : 0,
+    color: isSessionActive ? '#3B82F6' : '#9E9E9E',
+    cover: true,
+    width: 320,
+    height: 60,
+    autostart: true,
+    pixelDepth: 1.4,
+    lerpSpeed: 0.1,
+  };
+
   return (
-    <motion.button
-      onClick={onClick}
-      className={`
-        relative px-8 py-4 rounded-full text-lg font-semibold
-        ${isSessionActive 
-          ? 'bg-red-500 hover:bg-red-600 text-white' 
-          : 'bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white'
-        }
-        shadow-lg transform transition-all duration-200
-      `}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-    >
-      {/* Ripple effect when active */}
-      {isSessionActive && (
+    <div className="flex flex-col items-center justify-center gap-2">
+      {/* Wave visualization */}
+      <motion.div
+        className="w-full flex justify-center items-center h-16"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ 
+          opacity: isSessionActive ? 1 : 0,
+          y: isSessionActive ? 0 : 10,
+        }}
+        transition={{ duration: 0.4 }}
+      >
+        <div className="-mb-2">
+          <ReactSiriwave {...siriWaveConfig} />
+        </div>
+      </motion.div>
+
+      {/* Button container */}
+      <div className="flex flex-col items-center">
+        {/* Main button */}
+        <motion.button
+          onClick={onClick}
+          className={`
+            flex items-center justify-center w-14 h-14 rounded-full 
+            ${isSessionActive 
+              ? 'bg-gradient-to-br from-rose-500 to-pink-500 shadow-lg shadow-rose-500/30' 
+              : 'bg-gradient-to-br from-blue-500 to-indigo-500 shadow-lg shadow-blue-500/30'
+            }
+            transition-all duration-300
+          `}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <AnimatePresence mode="wait">
+            {isSessionActive ? (
+              <motion.div
+                key="stop"
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                exit={{ scale: 0, rotate: 180 }}
+                transition={{ type: "spring", duration: 0.5 }}
+              >
+                <MicOff className="w-6 h-6 text-white" />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="start"
+                initial={{ scale: 0, rotate: 180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                exit={{ scale: 0, rotate: -180 }}
+                transition={{ type: "spring", duration: 0.5 }}
+              >
+                <Mic className="w-6 h-6 text-white" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
+
+        {/* Status text */}
         <motion.div
-          className="absolute inset-0 rounded-full"
-          initial={{ opacity: 0.5, scale: 1 }}
+          className="mt-1.5"
+          initial={{ opacity: 0, y: 5 }}
           animate={{ 
-            opacity: 0,
-            scale: 1.5,
+            opacity: 0.7, 
+            y: 0,
           }}
-          transition={{
-            duration: 1.5,
-            repeat: Infinity,
+          whileHover={{ opacity: 1 }}
+          transition={{ 
+            duration: 0.2,
             ease: "easeOut"
           }}
-          style={{
-            border: '2px solid rgba(239, 68, 68, 0.5)',
-          }}
-        />
-      )}
-
-      {/* Microphone icon with animation */}
-      <div className="flex items-center gap-3">
-        <motion.div
-          animate={isSessionActive ? {
-            scale: [1, 1.2, 1],
-            transition: {
-              duration: 1,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }
-          } : {}}
         >
-          {isSessionActive ? '🎤' : '🎙️'}
+          <span className={`text-xs font-medium ${
+            isSessionActive ? 'text-rose-500/70' : 'text-blue-500/70'
+          }`}>
+            {isSessionActive ? 'Recording' : 'Ready'}
+          </span>
         </motion.div>
-
-        <span>
-          {isSessionActive ? 'Stop Talking' : 'Start Talking!'}
-        </span>
-
-        {/* Animated dots when active */}
-        {isSessionActive && (
-          <div className="flex gap-1">
-            {[...Array(3)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="w-2 h-2 bg-white rounded-full"
-                animate={{
-                  scale: [1, 1.5, 1],
-                  opacity: [0.5, 1, 0.5]
-                }}
-                transition={{
-                  duration: 0.6,
-                  repeat: Infinity,
-                  delay: i * 0.2
-                }}
-              />
-            ))}
-          </div>
-        )}
       </div>
-
-      {/* Background glow effect */}
-      <motion.div
-        className="absolute inset-0 rounded-full opacity-50 blur-md -z-10"
-        animate={{
-          background: isSessionActive
-            ? ['rgba(239, 68, 68, 0.5)', 'rgba(239, 68, 68, 0.3)', 'rgba(239, 68, 68, 0.5)']
-            : ['rgba(147, 51, 234, 0.5)', 'rgba(79, 70, 229, 0.3)', 'rgba(147, 51, 234, 0.5)']
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-    </motion.button>
+    </div>
   );
 }; 

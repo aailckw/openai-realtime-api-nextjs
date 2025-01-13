@@ -1,131 +1,164 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import Lottie from 'react-lottie-player';
-import { motion, AnimatePresence } from 'framer-motion';
+
+type Character = 'robot' | 'cat' | 'dinosaur' | 'bear' | 'meerkat' | 'sheep';
 
 interface CharacterAvatarProps {
-  character: 'robot' | 'cat' | 'dinosaur' | 'bear' | 'meercat' | 'sheep';
+  character: Character;
   onClick?: () => void;
   isTalking?: boolean;
 }
 
-const characterEmojis = {
-  robot: ['⚡', '🤖', '💫', '🔧', '✨', '🎮', '🔋', '💡'],
-  cat: ['🎵', '🐱', '🎶', '💫', '✨', '🎸', '🌙', '🎭'],
-  dinosaur: ['🦖', '🌿', '🌟', '🦕', '✨', '🌴', '🍃', '🦎'],
-  bear: ['🍯', '🐻', '💝', '🌸', '✨', '🌺', '🍓', '❤️'],
-  meercat: ['🌟', '🦦', '💫', '⭐', '✨', '🌞', '🌼', '🔆'],
-  sheep: ['🌈', '🐑', '💫', '☁️', '✨', '🌥️', '💜', '🦋']
+const characterEmojis: Record<Character, string[]> = {
+  robot: ['🤖', '⚡', '💫', '🔧', '💭'],
+  cat: ['😺', '🐱', '🐟', '🧶', '💕'],
+  dinosaur: ['🦖', '🦕', '🌿', '🍖', '🦴'],
+  bear: ['🐻', '🍯', '🌲', '🐝', '🍎'],
+  meerkat: ['🦦', '🌞', '🌵', '🪲', '👀'],
+  sheep: ['🐑', '🌾', '🌸', '☁️', '🌿']
 };
 
-const characterColors = {
-  robot: { primary: '#3B82F6', secondary: '#60A5FA', glow: '#2563EB' },
-  cat: { primary: '#F97316', secondary: '#FB923C', glow: '#EA580C' },
-  dinosaur: { primary: '#22C55E', secondary: '#4ADE80', glow: '#16A34A' },
-  bear: { primary: '#F59E0B', secondary: '#FCD34D', glow: '#D97706' },
-  meercat: { primary: '#EAB308', secondary: '#FDE047', glow: '#CA8A04' },
-  sheep: { primary: '#A855F7', secondary: '#C084FC', glow: '#9333EA' }
+const characterDelays: Record<Character, number> = {
+  robot: 0.6,    // Mechanical, more precise timing
+  cat: 0.8,      // Playful, varied timing
+  dinosaur: 0.7, // Strong, impactful timing
+  bear: 0.9,     // Slow, gentle timing
+  meerkat: 0.5,  // Quick, alert timing
+  sheep: 1.0     // Relaxed, slowest timing
 };
 
-export const CharacterAvatar: React.FC<CharacterAvatarProps> = ({ 
-  character, 
+export const CharacterAvatar: React.FC<CharacterAvatarProps> = ({
+  character,
   onClick,
   isTalking = false
 }) => {
-  const [animation, setAnimation] = React.useState<Record<string, unknown> | null>(null);
+  const [animation, setAnimation] = useState<Record<string, unknown> | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
+  const emojiKeyRef = useRef<string>(`${character}-${Date.now()}`);
+  const timeoutRef = useRef<NodeJS.Timeout>();
+  const animationRef = useRef<number[]>([]);
 
-  React.useEffect(() => {
-    import(`@/public/animations/${character}.json`)
-      .then((animationData) => {
-        setAnimation(animationData.default);
-      })
-      .catch(console.error);
+  useEffect(() => {
+    const loadAnimation = async () => {
+      const animationData = await import(`@/public/animations/${character}.json`);
+      setAnimation(animationData.default);
+    };
+    loadAnimation();
   }, [character]);
 
+  // Update emoji key and animation offsets when character changes
+  useEffect(() => {
+    emojiKeyRef.current = `${character}-${Date.now()}`;
+    // Generate random offsets for more natural animation
+    animationRef.current = Array(characterEmojis[character].length)
+      .fill(0)
+      .map(() => Math.random() * Math.PI * 2);
+  }, [character]);
+
+  // Handle visibility with debounce
+  useEffect(() => {
+    if (isTalking) {
+      setIsVisible(true);
+    } else {
+      timeoutRef.current = setTimeout(() => {
+        setIsVisible(false);
+      }, 500);
+    }
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [isTalking]);
+
+  const currentEmojis = characterEmojis[character];
+  const baseDelay = characterDelays[character];
+
   return (
-    <motion.div
-      className="relative cursor-pointer"
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={onClick}
-      animate={isTalking ? {
-        scale: [1, 1.15, 1],
-        transition: {
-          duration: 1.2,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }
-      } : {}}
-    >
-      {/* Character container with enhanced glow effect */}
-      <motion.div 
-        className="w-80 h-80 relative"
+    <div className="relative w-full aspect-square h-[280px] md:h-[400px]">
+      <motion.div
+        className={`w-full h-full cursor-pointer ${isTalking ? 'animate-glow' : ''}`}
+        onClick={onClick}
         animate={isTalking ? {
-          filter: [
-            `drop-shadow(0 0 40px ${characterColors[character].primary}99)`,
-            `drop-shadow(0 0 60px ${characterColors[character].secondary}99)`,
-            `drop-shadow(0 0 80px ${characterColors[character].glow}99)`,
-            `drop-shadow(0 0 100px ${characterColors[character].primary}99)`,
-            `drop-shadow(0 0 60px ${characterColors[character].secondary}99)`,
-            `drop-shadow(0 0 40px ${characterColors[character].glow}99)`
-          ],
+          scale: [1, 1.1, 0.95, 1.05, 1],
+          rotate: [-1, 1, -1],
+          transition: {
+            scale: {
+              duration: 0.8,
+              repeat: Infinity,
+              ease: "easeInOut"
+            },
+            rotate: {
+              duration: 0.5,
+              repeat: Infinity,
+              ease: "linear"
+            }
+          }
         } : {}}
-        transition={{ 
-          duration: 3,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
       >
         {animation && (
-          <Lottie
-            loop
-            play
-            animationData={animation}
-            style={{ width: '100%', height: '100%' }}
-          />
+          <div className="w-full h-full">
+            <Lottie
+              loop
+              play
+              animationData={animation}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          </div>
         )}
-
-        {/* Floating emojis when talking */}
-        <AnimatePresence>
-          {isTalking && characterEmojis[character].map((emoji, index) => (
+      </motion.div>
+      
+      <div className="absolute inset-0 pointer-events-none">
+        {currentEmojis.map((emoji, index) => {
+          const offset = animationRef.current[index] || 0;
+          return (
             <motion.div
-              key={`${emoji}-${index}`}
-              className="absolute pointer-events-none text-4xl"
-              initial={{ 
-                opacity: 0, 
-                scale: 0,
-                x: '50%',
-                y: '50%'
-              }}
-              animate={{ 
-                opacity: [0, 1, 0],
-                scale: [0.5, 1.4, 0.5],
+              key={`${emoji}-${index}-${emojiKeyRef.current}`}
+              className="absolute text-2xl md:text-4xl filter drop-shadow-lg"
+              initial={{ opacity: 0, scale: 0 }}
+              animate={isVisible ? {
+                opacity: [0, 1, 1, 1, 0],
+                scale: [0.5, 1.4, 1.4, 1.4, 0.5],
                 x: [
-                  '50%',
-                  `${50 + Math.cos(index * Math.PI * 0.25) * 180}%`,
-                  '50%'
+                  -20 + Math.sin(index * 72 + offset) * 40,
+                  -10 + Math.sin(index * 72 + offset) * 50,
+                  -10 + Math.sin(index * 72 + offset) * 50,
+                  -10 + Math.sin(index * 72 + offset) * 50,
+                  -20 + Math.sin(index * 72 + offset) * 40
                 ],
                 y: [
-                  '50%',
-                  `${50 + Math.sin(index * Math.PI * 0.25) * 180}%`,
-                  '50%'
+                  -40 - Math.cos(index * 72 + offset) * 40,
+                  -50 - Math.cos(index * 72 + offset) * 50,
+                  -50 - Math.cos(index * 72 + offset) * 50,
+                  -50 - Math.cos(index * 72 + offset) * 50,
+                  -40 - Math.cos(index * 72 + offset) * 40
                 ]
+              } : {
+                opacity: 0,
+                scale: 0,
+                x: -20 + Math.sin(index * 72 + offset) * 40,
+                y: -40 - Math.cos(index * 72 + offset) * 40
               }}
               transition={{
                 duration: 4,
-                delay: index * 0.4,
+                times: [0, 0.2, 0.5, 0.8, 1],
                 repeat: Infinity,
-                ease: "easeInOut"
+                delay: index * baseDelay,
+                ease: "easeInOut",
+                repeatDelay: 1
+              }}
+              style={{
+                filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))',
+                WebkitFilter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15))'
               }}
             >
               {emoji}
             </motion.div>
-          ))}
-        </AnimatePresence>
-      </motion.div>
-
-      <p className="text-center mt-4 text-2xl font-medium text-gray-700">
-        {characterEmojis[character][1]} {/* Use the character's main emoji */}
-      </p>
-    </motion.div>
+          );
+        })}
+      </div>
+    </div>
   );
 }; 

@@ -5,54 +5,49 @@ interface Message {
   text: string;
   isUser: boolean;
   timestamp: Date;
+  character: 'robot' | 'cat' | 'dinosaur' | 'bear' | 'meerkat' | 'sheep';
 }
 
 interface ConversationLogProps {
   messages: Message[];
-  character: 'robot' | 'cat' | 'dinosaur' | 'bear' | 'meercat' | 'sheep';
+  character: 'robot' | 'cat' | 'dinosaur' | 'bear' | 'meerkat' | 'sheep';
 }
 
 const characterBubbleStyles = {
   robot: {
-    bg: 'bg-gradient-to-br from-blue-100 to-blue-200',
-    border: 'border-blue-300',
-    text: 'text-blue-900'
+    bg: 'bg-gradient-to-br from-cyan-100 to-blue-100',
+    text: 'text-cyan-900'
   },
   cat: {
-    bg: 'bg-gradient-to-br from-orange-100 to-orange-200',
-    border: 'border-orange-300',
-    text: 'text-orange-900'
-  },
-  dinosaur: {
-    bg: 'bg-gradient-to-br from-green-100 to-green-200',
-    border: 'border-green-300',
-    text: 'text-green-900'
-  },
-  bear: {
-    bg: 'bg-gradient-to-br from-amber-100 to-amber-200',
-    border: 'border-amber-300',
+    bg: 'bg-gradient-to-br from-amber-100 to-yellow-100',
     text: 'text-amber-900'
   },
-  meercat: {
-    bg: 'bg-gradient-to-br from-yellow-100 to-yellow-200',
-    border: 'border-yellow-300',
-    text: 'text-yellow-900'
+  dinosaur: {
+    bg: 'bg-gradient-to-br from-emerald-100 to-green-100',
+    text: 'text-emerald-900'
+  },
+  bear: {
+    bg: 'bg-gradient-to-br from-rose-100 to-pink-100',
+    text: 'text-rose-900'
+  },
+  meerkat: {
+    bg: 'bg-gradient-to-br from-orange-100 to-amber-100',
+    text: 'text-orange-900'
   },
   sheep: {
-    bg: 'bg-gradient-to-br from-purple-100 to-purple-200',
-    border: 'border-purple-300',
+    bg: 'bg-gradient-to-br from-purple-100 to-violet-100',
     text: 'text-purple-900'
   }
-};
+} as const;
 
 const characterEmojis = {
   robot: '🤖',
   cat: '😺',
   dinosaur: '🦖',
   bear: '🐻',
-  meercat: '🦦',
+  meerkat: '🦦',
   sheep: '🐑'
-};
+} as const;
 
 export const ConversationLog: React.FC<ConversationLogProps> = ({ messages, character }) => {
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -64,7 +59,7 @@ export const ConversationLog: React.FC<ConversationLogProps> = ({ messages, char
   }, [messages]);
 
   return (
-    <div className="w-full h-[500px] bg-white/95 rounded-2xl shadow-lg border-2 border-gray-100 p-2 relative overflow-hidden">
+    <div className="w-full h-[500px] bg-white/95 rounded-2xl shadow-lg p-2 relative overflow-hidden">
       {/* Decorative background pattern */}
       <div className="absolute inset-0 opacity-5">
         {[...Array(20)].map((_, i) => (
@@ -100,32 +95,16 @@ export const ConversationLog: React.FC<ConversationLogProps> = ({ messages, char
               transition={{ duration: 0.3 }}
               className={`flex ${message.isUser ? 'justify-end' : 'justify-start'} mb-4`}
             >
-              <div 
+              <div
                 className={`
                   max-w-[85%] rounded-2xl px-6 py-3
                   ${message.isUser 
-                    ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white border-2 border-purple-400' 
-                    : `${characterBubbleStyles[character].bg} border-2 ${characterBubbleStyles[character].border} ${characterBubbleStyles[character].text}`
+                    ? 'bg-gradient-to-br from-purple-500 to-purple-600 text-white' 
+                    : `${characterBubbleStyles[character].bg} ${characterBubbleStyles[character].text}`
                   }
                   shadow-lg relative
                 `}
               >
-                {/* Chat bubble pointer */}
-                <div 
-                  className={`
-                    absolute top-4 w-4 h-4 transform rotate-45
-                    ${message.isUser 
-                      ? 'right-0 translate-x-2 bg-purple-500' 
-                      : `left-0 -translate-x-2 ${characterBubbleStyles[character].bg.replace('gradient-to-br', '')}`
-                    }
-                    border-2
-                    ${message.isUser 
-                      ? 'border-purple-400' 
-                      : characterBubbleStyles[character].border
-                    }
-                  `}
-                />
-
                 <div className="flex items-center gap-2 mb-2">
                   <span className="text-xl">
                     {message.isUser ? '👤' : characterEmojis[character]}

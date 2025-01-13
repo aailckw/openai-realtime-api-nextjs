@@ -4,12 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Conversation } from "@/lib/conversations";
 import { useTranslations } from "@/components/translations-context";
+import { Tool } from "@/lib/tools";
 
-export interface Tool {
-  name: string;
-  description: string;
-  parameters?: Record<string, any>;
-}
+type Character = 'robot' | 'cat' | 'dinosaur' | 'bear' | 'meerkat' | 'sheep';
 
 /**
  * The return type for the hook, matching Approach A
@@ -33,6 +30,7 @@ interface UseWebRTCAudioSessionReturn {
  */
 export default function useWebRTCAudioSession(
   voice: string,
+  character: Character,
   tools?: Tool[],
 ): UseWebRTCAudioSessionReturn {
   const { t, locale } = useTranslations();
@@ -70,15 +68,6 @@ export default function useWebRTCAudioSession(
    */
   const ephemeralUserMessageIdRef = useRef<string | null>(null);
 
-  const voiceToCharacter: Record<string, string> = {
-    'echo': 'robot',
-    'shimmer': 'cat',
-    'sage': 'dinosaur',
-    'coral': 'bear',
-    'alloy': 'meercat',
-    'ballad': 'sheep'
-  };
-
   /**
    * Register a function (tool) so the AI can call it.
    */
@@ -99,6 +88,7 @@ export default function useWebRTCAudioSession(
         input_audio_transcription: {
           model: "whisper-1",
         },
+        character: character,
       },
     };
     dataChannel.send(JSON.stringify(sessionUpdate));
@@ -322,7 +312,6 @@ export default function useWebRTCAudioSession(
    */
   async function getEphemeralToken() {
     try {
-      const character = voiceToCharacter[voice] || 'robot';
       const response = await fetch("/api/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -10,14 +10,14 @@ import { useToolsFunctions } from "@/hooks/use-tools"
 import { DebugPanel } from "@/components/debug-panel"
 import { StatusPopup } from "@/components/status-popup"
 
-type Character = 'robot' | 'cat' | 'dinosaur' | 'bear' | 'meercat' | 'sheep';
+type Character = 'robot' | 'cat' | 'dinosaur' | 'bear' | 'meerkat' | 'sheep';
 
 const characterToVoice: Record<Character, string> = {
   robot: 'echo',
   cat: 'shimmer',
   dinosaur: 'sage',
   bear: 'coral',
-  meercat: 'alloy',
+  meerkat: 'alloy',
   sheep: 'ballad'
 };
 
@@ -54,7 +54,7 @@ const characterBubbleStyles = {
     border: 'border-amber-300',
     text: 'text-amber-900'
   },
-  meercat: {
+  meerkat: {
     bg: 'bg-gradient-to-br from-yellow-100 to-yellow-200',
     border: 'border-yellow-300',
     text: 'text-yellow-900'
@@ -72,6 +72,8 @@ const App: React.FC = () => {
   const [isTalking, setIsTalking] = useState(false)
   const [showStatus, setShowStatus] = useState(false)
   const [messages, setMessages] = React.useState<Message[]>([])
+  const [displayedText, setDisplayedText] = useState("")
+  const [isAnimatingText, setIsAnimatingText] = useState(false)
 
   // WebRTC Audio Session Hook
   const {
@@ -84,18 +86,17 @@ const App: React.FC = () => {
     msgs,
     conversation,
     currentVolume
-  } = useWebRTCAudioSession(characterToVoice[character], tools)
+  } = useWebRTCAudioSession(characterToVoice[character], character, tools)
 
   // Handle character change during active session
   const handleCharacterChange = async (newCharacter: Character) => {
     if (isSessionActive) {
-      // Stop current session
       stopSession();
-      // Update character after session is stopped
+      setMessages([]);
+      setDisplayedText("");
+      setIsAnimatingText(false);
       setCharacter(newCharacter);
-      // Small delay to ensure clean session restart
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      // Start new session with new character
+      await new Promise(resolve => setTimeout(resolve, 1500));
       startSession();
     } else {
       setCharacter(newCharacter);
@@ -150,6 +151,11 @@ const App: React.FC = () => {
           );
           
           if (!isDuplicate) {
+            // Start text animation for new message
+            if (lastMsg.role === 'assistant') {
+              setDisplayedText("");
+              animateText(lastMsg.content);
+            }
             return [...prevMessages, {
               text: lastMsg.content,
               isUser: lastMsg.role === 'user',
@@ -161,6 +167,27 @@ const App: React.FC = () => {
       }
     }
   }, [msgs]);
+
+  const animateText = async (text: string) => {
+    setIsAnimatingText(true);
+    const words = text.split(" ");
+    let currentText = "";
+    
+    for (let i = 0; i < words.length; i++) {
+      currentText += (i === 0 ? "" : " ") + words[i];
+      setDisplayedText(currentText);
+      // Wait longer for punctuation marks
+      const delay = words[i].match(/[.!?]$/) ? 400 : 200;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+    
+    setIsAnimatingText(false);
+  };
+
+  // Update isTalking based on text animation
+  useEffect(() => {
+    setIsTalking(isAnimatingText);
+  }, [isAnimatingText]);
 
   // Update messages when conversation changes
   useEffect(() => {
@@ -183,104 +210,70 @@ const App: React.FC = () => {
     .slice(-1)[0];
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-blue-50 to-purple-50 py-8">
+    <main className="min-h-screen bg-gradient-to-b from-blue-50 to-purple-50 flex flex-col justify-center py-4 md:py-8">
       {/* Status Popup */}
       <StatusPopup 
         status={status} 
         isVisible={showStatus}
       />
 
-      <div className="container mx-auto px-4 max-w-2xl">
+      <div className="container mx-auto px-2 md:px-4 max-w-2xl">
+        {/* Latest chat bubble */}
+        {latestCharacterMessage && (
+          <motion.div 
+            className="relative mb-4 md:mb-6 w-full max-w-[280px] md:max-w-sm mx-auto"
+            initial={{ opacity: 0, scale: 0.8, y: 10 }}
+            animate={{ 
+              opacity: 1, 
+              scale: 1, 
+              y: 0,
+              transition: {
+                stiffness: 400,
+                damping: 25
+              }
+            }}
+          >
+            <motion.div 
+              className={`
+                relative px-5 md:px-6 py-3 md:py-4
+                before:content-[''] before:absolute before:left-1/2 before:-bottom-[10px] 
+                before:w-5 before:h-5 before:-translate-x-1/2 before:rotate-45
+                after:content-[''] after:absolute after:left-1/2 after:-bottom-[9px] 
+                after:w-5 after:h-5 after:-translate-x-1/2 after:rotate-45
+                ${characterBubbleStyles[character].bg} 
+                before:${characterBubbleStyles[character].bg.replace('from-', '').replace('to-', '')}
+                after:${characterBubbleStyles[character].bg.replace('from-', '').replace('to-', '')}
+                rounded-2xl md:rounded-3xl shadow-lg
+              `}
+              animate={isTalking ? {
+                scale: [1, 1.02, 1],
+                transition: {
+                  duration: 0.5,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }
+              } : {}}
+            >
+              {/* Text content */}
+              <motion.p 
+                className={`text-base md:text-lg font-medium ${characterBubbleStyles[character].text} leading-relaxed`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                {displayedText || latestCharacterMessage.text}
+              </motion.p>
+            </motion.div>
+          </motion.div>
+        )}
+
         <motion.div 
-          className="bg-white/90 backdrop-blur-sm rounded-3xl border-2 border-purple-100 shadow-xl p-8"
+          className="bg-white/90 backdrop-blur-sm rounded-2xl md:rounded-3xl border-2 border-purple-100 shadow-xl p-4 md:p-8 relative"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4 }}
         >
           <div className="relative">
-            {/* Latest chat bubble */}
-            {latestCharacterMessage && (
-              <motion.div 
-                className="absolute left-1/2 -top-20 -translate-x-1/2 w-full max-w-sm z-10"
-                initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                animate={{ 
-                  opacity: 1, 
-                  scale: 1, 
-                  y: 0,
-                  transition: {
-                    type: "spring",
-                    stiffness: 400,
-                    damping: 25
-                  }
-                }}
-              >
-                <motion.div 
-                  className={`
-                    relative px-6 py-3 rounded-2xl shadow-lg
-                    ${characterBubbleStyles[character].bg} 
-                    ${characterBubbleStyles[character].border} border-2
-                  `}
-                  animate={isTalking ? {
-                    scale: [1, 1.02, 1],
-                    transition: {
-                      duration: 0.5,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }
-                  } : {}}
-                >
-                  {/* Animated pointer */}
-                  <motion.div 
-                    className={`
-                      absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 
-                      ${characterBubbleStyles[character].bg}
-                      ${characterBubbleStyles[character].border} border-2
-                      transform rotate-45 border-t-0 border-l-0
-                    `}
-                    animate={isTalking ? {
-                      y: [0, 2, 0],
-                      transition: {
-                        duration: 0.5,
-                        repeat: Infinity,
-                        ease: "easeInOut"
-                      }
-                    } : {}}
-                  />
-
-                  {/* Text content */}
-                  <motion.p 
-                    className={`text-lg font-medium ${characterBubbleStyles[character].text}`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    {latestCharacterMessage.text}
-                  </motion.p>
-
-                  {/* Animated dots when talking */}
-                  {isTalking && (
-                    <div className="flex gap-1 mt-1 h-4">
-                      {[...Array(3)].map((_, i) => (
-                        <motion.div
-                          key={i}
-                          className={`w-2 h-2 rounded-full ${characterBubbleStyles[character].border}`}
-                          animate={{
-                            scale: [1, 1.5, 1],
-                            opacity: [0.5, 1, 0.5]
-                          }}
-                          transition={{
-                            duration: 0.6,
-                            repeat: Infinity,
-                            delay: i * 0.2
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              </motion.div>
-            )}
-
             {/* Character */}
             <div className="relative z-0">
               <CharacterSelect 
@@ -289,20 +282,21 @@ const App: React.FC = () => {
                 isTalking={isSessionActive && isTalking}
               />
             </div>
-          </div>
-        </motion.div>
 
-        {/* Broadcast Button - Moved outside the card */}
-        <motion.div 
-          className="mt-8 flex justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <BroadcastButton 
-            isSessionActive={isSessionActive} 
-            onClick={handleStartStopClick}
-          />
+            {/* Broadcast Button with wave */}
+            <motion.div 
+              className="mt-4 md:mt-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <BroadcastButton 
+                isSessionActive={isSessionActive} 
+                onClick={handleStartStopClick}
+                currentVolume={currentVolume}
+              />
+            </motion.div>
+          </div>
         </motion.div>
       </div>
 
